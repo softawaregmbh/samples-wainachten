@@ -287,6 +287,7 @@ namespace LiveCameraSample
 
                 visImage = Visualization.DrawFaces(visImage, result.Faces, result.EmotionScores, result.CelebrityNames);
                 visImage = Visualization.DrawTags(visImage, result.Tags);
+                //visImage = Visualization.DrawObjects(visImage, result.Objects);
             }
 
             return visImage;
