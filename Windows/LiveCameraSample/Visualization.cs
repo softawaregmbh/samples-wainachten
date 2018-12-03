@@ -193,7 +193,7 @@ namespace LiveCameraSample
 
         //            FormattedText ft = new FormattedText(recognizedObject.TagName,
         //                    CultureInfo.CurrentCulture, FlowDirection.LeftToRight, s_typeface,
-        //                    16 * annotationScale, Brushes.Black);
+        //                    30 * annotationScale, Brushes.White);
 
         //            var pad = 3 * annotationScale;
 
