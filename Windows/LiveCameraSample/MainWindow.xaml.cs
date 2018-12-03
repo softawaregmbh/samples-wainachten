@@ -38,8 +38,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
+using FaceIdentification.CognitiveServices;
 using Microsoft.Azure.CognitiveServices.Vision.CustomVision.Prediction;
 using Microsoft.Azure.CognitiveServices.Vision.Face;
 using Microsoft.Azure.CognitiveServices.Vision.Face.Models;
@@ -78,7 +80,8 @@ namespace LiveCameraSample
             Tags,
             Celebrities,
             Christkind,
-            SurprisingMoment
+            SurprisingMoment,
+            Relatives
         }
 
         public MainWindow()
@@ -361,10 +364,46 @@ namespace LiveCameraSample
                 case AppMode.SurprisingMoment:
                     _grabber.AnalysisFunction = RecognizeSurprisingMomentAsync;
                     break;
+                case AppMode.Relatives:
+                    _grabber.AnalysisFunction = RecognizeRelativesAsync;
+                    break;
                 default:
                     _grabber.AnalysisFunction = null;
                     break;
             }
+        }
+
+        private async Task<LiveCameraResult> RecognizeRelativesAsync(VideoFrame frame)
+        {
+            var jpg = frame.Image.ToMemoryStream(".jpg", s_jpegParams);
+
+            var faceRecognizer = new FaceRecognizer(
+                "badf7d1a859740528f1ad194ded1c073",
+                "https://westeurope.api.cognitive.microsoft.com",
+                "family");
+
+            var result = await faceRecognizer.RecognizeImageAsync(jpg.ToArray());
+
+            var color = Colors.White;
+
+            if (result.Any())
+            {
+                var anyBad = result.Any(u => u.BestCandidate?.UserData == "bad");
+
+                if (anyBad)
+                {
+                    color = Colors.Red;
+                }
+                else
+                {
+                    color = Colors.Green;
+                }
+            }
+
+            this.Dispatcher.Invoke(() => this.Background = new SolidColorBrush(color));
+
+            return new LiveCameraResult();
+
         }
 
         private async Task<LiveCameraResult> RecognizeSurprisingMomentAsync(VideoFrame frame)
