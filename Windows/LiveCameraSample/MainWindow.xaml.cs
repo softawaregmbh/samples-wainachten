@@ -40,6 +40,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
+using Microsoft.Azure.CognitiveServices.Vision.CustomVision.Prediction;
 using Newtonsoft.Json;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
@@ -73,7 +74,8 @@ namespace LiveCameraSample
             Emotions,
             EmotionsWithClientFaceDetect,
             Tags,
-            Celebrities
+            Celebrities,
+            Christkind
         }
 
         public MainWindow()
@@ -287,7 +289,7 @@ namespace LiveCameraSample
 
                 visImage = Visualization.DrawFaces(visImage, result.Faces, result.EmotionScores, result.CelebrityNames);
                 visImage = Visualization.DrawTags(visImage, result.Tags);
-                //visImage = Visualization.DrawObjects(visImage, result.Objects);
+                visImage = Visualization.DrawObjects(visImage, result.Objects);
             }
 
             return visImage;
@@ -350,10 +352,43 @@ namespace LiveCameraSample
                 case AppMode.Celebrities:
                     _grabber.AnalysisFunction = CelebrityAnalysisFunction;
                     break;
+                case AppMode.Christkind:
+                    _grabber.AnalysisFunction = RecognizeChristkindAsync;
+                    break;
                 default:
                     _grabber.AnalysisFunction = null;
                     break;
             }
+        }
+
+        private async Task<LiveCameraResult> RecognizeChristkindAsync(VideoFrame frame)
+        {
+            var jpg = frame.Image.ToMemoryStream(".jpg", s_jpegParams);
+
+            var service = new CustomVisionPredictionClient()
+            {
+                ApiKey = "286d29ac328940db881dacfec06516a2",
+                Endpoint = "https://southcentralus.api.cognitive.microsoft.com"
+            };
+
+            var result = await service.PredictImageAsync(
+                Guid.Parse("ad5686a5-07c2-4b6a-805b-fc212dd48226"),
+                jpg);
+
+            var christkindRecognitions = result.Predictions.Where(p => p.Probability > 0.9 && p.TagName == "Christkind").ToList();
+
+            foreach (var recognition in christkindRecognitions)
+            {
+                recognition.BoundingBox.Left *= frame.Image.Width;
+                recognition.BoundingBox.Width *= frame.Image.Width;
+                recognition.BoundingBox.Top *= frame.Image.Height;
+                recognition.BoundingBox.Height *= frame.Image.Height;
+            }
+
+            return new LiveCameraResult()
+            {
+                Objects = christkindRecognitions
+            };
         }
 
         private async void StartButton_Click(object sender, RoutedEventArgs e)

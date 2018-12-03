@@ -43,6 +43,7 @@ using System.Windows.Media.Imaging;
 using Microsoft.ProjectOxford.Common.Contract;
 using FaceAPI = Microsoft.ProjectOxford.Face.Contract;
 using Microsoft.ProjectOxford.Vision.Contract;
+using Microsoft.Azure.CognitiveServices.Vision.CustomVision.Prediction.Models;
 
 namespace LiveCameraSample
 {
@@ -169,48 +170,48 @@ namespace LiveCameraSample
             return DrawOverlay(baseImage, drawAction);
         }
 
-        //internal static BitmapSource DrawObjects(BitmapSource baseImage, IEnumerable<PredictionModel> objects)
-        //{
-        //    if (objects == null || !objects.Any())
-        //    {
-        //        return baseImage;
-        //    }
+        internal static BitmapSource DrawObjects(BitmapSource baseImage, IEnumerable<PredictionModel> objects)
+        {
+            if (objects == null || !objects.Any())
+            {
+                return baseImage;
+            }
 
-        //    Action<DrawingContext, double> drawAction = (drawingContext, annotationScale) =>
-        //    {
-        //        foreach (var recognizedObject in objects)
-        //        {
-        //            double lineThickness = 4 * annotationScale;
+            Action<DrawingContext, double> drawAction = (drawingContext, annotationScale) =>
+            {
+                foreach (var recognizedObject in objects)
+                {
+                    double lineThickness = 4 * annotationScale;
 
-        //            drawingContext.DrawRectangle(
-        //                Brushes.Transparent,
-        //                new Pen(s_lineBrush, lineThickness),
-        //                new Rect(
-        //                    recognizedObject.BoundingBox.Left,
-        //                    recognizedObject.BoundingBox.Top,
-        //                    recognizedObject.BoundingBox.Width,
-        //                    recognizedObject.BoundingBox.Height));
+                    drawingContext.DrawRectangle(
+                        Brushes.Transparent,
+                        new Pen(s_lineBrush, lineThickness),
+                        new Rect(
+                            recognizedObject.BoundingBox.Left,
+                            recognizedObject.BoundingBox.Top,
+                            recognizedObject.BoundingBox.Width,
+                            recognizedObject.BoundingBox.Height));
 
-        //            FormattedText ft = new FormattedText(recognizedObject.TagName,
-        //                    CultureInfo.CurrentCulture, FlowDirection.LeftToRight, s_typeface,
-        //                    16 * annotationScale, Brushes.Black);
+                    FormattedText ft = new FormattedText(recognizedObject.TagName,
+                            CultureInfo.CurrentCulture, FlowDirection.LeftToRight, s_typeface,
+                            30 * annotationScale, Brushes.White);
 
-        //            var pad = 3 * annotationScale;
+                    var pad = 3 * annotationScale;
 
-        //            var ypad = pad;
-        //            var xpad = pad + 4 * annotationScale;
-        //            var origin = new System.Windows.Point(
-        //                recognizedObject.BoundingBox.Left + xpad - lineThickness / 2,
-        //                recognizedObject.BoundingBox.Top - ft.Height - ypad + lineThickness / 2);
-        //            var rect = ft.BuildHighlightGeometry(origin).GetRenderBounds(null);
-        //            rect.Inflate(xpad, ypad);
+                    var ypad = pad;
+                    var xpad = pad + 4 * annotationScale;
+                    var origin = new System.Windows.Point(
+                        recognizedObject.BoundingBox.Left + xpad - lineThickness / 2,
+                        recognizedObject.BoundingBox.Top - ft.Height - ypad + lineThickness / 2);
+                    var rect = ft.BuildHighlightGeometry(origin).GetRenderBounds(null);
+                    rect.Inflate(xpad, ypad);
 
-        //            drawingContext.DrawText(ft, origin);
+                    drawingContext.DrawText(ft, origin);
 
-        //        }
-        //    };
+                }
+            };
 
-        //    return DrawOverlay(baseImage, drawAction);
-        //}
+            return DrawOverlay(baseImage, drawAction);
+        }
     }
 }
