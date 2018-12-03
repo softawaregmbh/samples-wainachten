@@ -41,6 +41,8 @@ using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using Microsoft.Azure.CognitiveServices.Vision.CustomVision.Prediction;
+using Microsoft.Azure.CognitiveServices.Vision.Face;
+using Microsoft.Azure.CognitiveServices.Vision.Face.Models;
 using Newtonsoft.Json;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
@@ -75,7 +77,8 @@ namespace LiveCameraSample
             EmotionsWithClientFaceDetect,
             Tags,
             Celebrities,
-            Christkind
+            Christkind,
+            SurprisingMoment
         }
 
         public MainWindow()
@@ -355,10 +358,38 @@ namespace LiveCameraSample
                 case AppMode.Christkind:
                     _grabber.AnalysisFunction = RecognizeChristkindAsync;
                     break;
+                case AppMode.SurprisingMoment:
+                    _grabber.AnalysisFunction = RecognizeSurprisingMomentAsync;
+                    break;
                 default:
                     _grabber.AnalysisFunction = null;
                     break;
             }
+        }
+
+        private async Task<LiveCameraResult> RecognizeSurprisingMomentAsync(VideoFrame frame)
+        {
+            var jpg = frame.Image.ToMemoryStream(".jpg", s_jpegParams);
+
+            var service = new FaceClient(new ApiKeyServiceClientCredentials("badf7d1a859740528f1ad194ded1c073"));
+
+            service.Endpoint = "https://westeurope.api.cognitive.microsoft.com";
+
+            var faces = await service.Face.DetectWithStreamAsync(
+                jpg,
+                false,
+                false,
+                new[] { FaceAttributeType.Emotion }
+                );
+
+            var surprisingFace = faces.FirstOrDefault(f => f.FaceAttributes.Emotion.Surprise > 0.9);
+
+            if (surprisingFace != null)
+            {
+                await _grabber.StopProcessingAsync();
+            }
+
+            return new LiveCameraResult();
         }
 
         private async Task<LiveCameraResult> RecognizeChristkindAsync(VideoFrame frame)
