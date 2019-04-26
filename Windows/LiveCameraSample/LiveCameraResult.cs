@@ -31,6 +31,9 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // 
 
+using System.Collections.Generic;
+using Microsoft.Azure.CognitiveServices.Vision.CustomVision.Prediction.Models;
+
 namespace LiveCameraSample
 {
     // Class to hold all possible result types. 
@@ -40,5 +43,6 @@ namespace LiveCameraSample
         public Microsoft.ProjectOxford.Common.Contract.EmotionScores[] EmotionScores { get; set; } = null;
         public string[] CelebrityNames { get; set; } = null;
         public Microsoft.ProjectOxford.Vision.Contract.Tag[] Tags { get; set; } = null;
+        public IEnumerable<PredictionModel> Objects { get; internal set; }
     }
 }

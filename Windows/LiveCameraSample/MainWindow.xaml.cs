@@ -38,8 +38,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
+using FaceIdentification.CognitiveServices;
+using Microsoft.Azure.CognitiveServices.Vision.CustomVision.Prediction;
+using Microsoft.Azure.CognitiveServices.Vision.Face;
+using Microsoft.Azure.CognitiveServices.Vision.Face.Models;
 using Newtonsoft.Json;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
@@ -67,13 +72,17 @@ namespace LiveCameraSample
         private AppMode _mode;
         private DateTime _startTime;
 
+
         public enum AppMode
         {
             Faces,
             Emotions,
             EmotionsWithClientFaceDetect,
             Tags,
-            Celebrities
+            Celebrities,
+            Christkind,
+            Surprisomat,
+            RelativesDetector
         }
 
         public MainWindow()
@@ -287,7 +296,7 @@ namespace LiveCameraSample
 
                 visImage = Visualization.DrawFaces(visImage, result.Faces, result.EmotionScores, result.CelebrityNames);
                 visImage = Visualization.DrawTags(visImage, result.Tags);
-                //visImage = Visualization.DrawObjects(visImage, result.Objects);
+                visImage = Visualization.DrawObjects(visImage, result.Objects);
             }
 
             return visImage;
@@ -350,10 +359,102 @@ namespace LiveCameraSample
                 case AppMode.Celebrities:
                     _grabber.AnalysisFunction = CelebrityAnalysisFunction;
                     break;
+                case AppMode.Christkind:
+                    _grabber.AnalysisFunction = RecognizeChristkindAsync;
+                    break;
+                case AppMode.Surprisomat:
+                    _grabber.AnalysisFunction = SurpriseomatAsync;
+                    break;
+                case AppMode.RelativesDetector:
+                    _grabber.AnalysisFunction = DetectRelativesAsync;
+                    break;
                 default:
                     _grabber.AnalysisFunction = null;
                     break;
             }
+        }
+
+        private async Task<LiveCameraResult> DetectRelativesAsync(VideoFrame frame)
+        {
+            var jpg = frame.Image.ToMemoryStream(".jpg", s_jpegParams);
+
+            var faceRecognizer = new FaceRecognizer(
+                "badf7d1a859740528f1ad194ded1c073",
+                "https://westeurope.api.cognitive.microsoft.com",
+                "family");
+
+            var result = await faceRecognizer.RecognizeImageAsync(jpg.ToArray());
+
+            var color = Colors.White;
+
+            if (result.Any())
+            {
+                var anyBad = result.Any(u => u.BestCandidate?.UserData == "bad");
+
+                if (anyBad)
+                {
+                    color = Colors.Red;
+                }
+                else
+                {
+                    color = Colors.Green;
+                }
+            }
+
+            this.Dispatcher.Invoke(() => this.Background = new SolidColorBrush(color));
+
+            return new LiveCameraResult();
+        }
+
+        private async Task<LiveCameraResult> SurpriseomatAsync(VideoFrame frame)
+        {
+            var jpg = frame.Image.ToMemoryStream(".jpg", s_jpegParams);
+
+            var service = new FaceClient(
+                new ApiKeyServiceClientCredentials("badf7d1a859740528f1ad194ded1c073"));
+
+            service.Endpoint = "https://westeurope.api.cognitive.microsoft.com";
+
+            var faces = await service.Face.DetectWithStreamAsync(jpg, returnFaceAttributes: new[] { FaceAttributeType.Emotion });
+
+            var surprisingFace = faces.FirstOrDefault(f => f.FaceAttributes.Emotion.Surprise > 0.9);
+
+            if (surprisingFace != null)
+            {
+                await _grabber.StopProcessingAsync();
+            }
+
+            return new LiveCameraResult();
+        }
+
+        private async Task<LiveCameraResult> RecognizeChristkindAsync(VideoFrame frame)
+        {
+            var jpg = frame.Image.ToMemoryStream(".jpg", s_jpegParams);
+
+
+            var service = new CustomVisionPredictionClient()
+            {
+                ApiKey = "286d29ac328940db881dacfec06516a2",        // from Custom Vision settings, Prediction Key
+                Endpoint = "https://southcentralus.api.cognitive.microsoft.com"
+            };
+
+            var result = await service.PredictImageAsync(
+                Guid.Parse("4dd71734-dc6c-49a9-8567-0b3e893fccfd"), // from Custom Vision settings, Project Id
+                jpg);
+
+            var recognizedAreas = result.Predictions.Where(p => p.Probability > 0.9);
+            foreach (var recognizedArea in recognizedAreas)
+            {
+                recognizedArea.BoundingBox.Width *= frame.Image.Width;
+                recognizedArea.BoundingBox.Height *= frame.Image.Height;
+                recognizedArea.BoundingBox.Left *= frame.Image.Width;
+                recognizedArea.BoundingBox.Top *= frame.Image.Height;
+            }
+
+            return new LiveCameraResult()
+            {
+                Objects = recognizedAreas
+            };
         }
 
         private async void StartButton_Click(object sender, RoutedEventArgs e)
